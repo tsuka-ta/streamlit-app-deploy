@@ -1,46 +1,54 @@
-
+import os
+from dotenv import load_dotenv
+from openai import OpenAI
 import streamlit as st
 
-st.title("サンプルアプリ②: 少し複雑なWebアプリ")
+# .env 読み込み
+load_dotenv()
+client = OpenAI(api_key=os.environ["OPENAI_API_KEY"])
 
-st.write("##### 動作モード1: 文字数カウント")
-st.write("入力フォームにテキストを入力し、「実行」ボタンを押すことで文字数をカウントできます。")
-st.write("##### 動作モード2: BMI値の計算")
-st.write("身長と体重を入力することで、肥満度を表す体型指数のBMI値を算出できます。")
+st.title("llmアプリ: 専門家に相談Webアプリ")
+
+st.write("##### 動作モード1: ドラえもんの専門家")
+st.write("ドラえもんの専門家に質問することで、ドラえもんに関する様々な情報を得ることができます。")
+st.write("##### 動作モード2: ポケモンの専門家")
+st.write("ポケモンの専門家に質問することで、ポケモンに関する様々な情報を得ることができます。")
 
 selected_item = st.radio(
     "動作モードを選択してください。",
-    ["文字数カウント", "BMI値の計算"]
+    ["ドラえもんの専門家", "ポケモンの専門家"]
 )
 
 st.divider()
 
-if selected_item == "文字数カウント":
-    input_message = st.text_input(label="文字数のカウント対象となるテキストを入力してください。")
-    text_count = len(input_message)
-
-else:
-    height = st.text_input(label="身長（cm）を入力してください。")
-    weight = st.text_input(label="体重（kg）を入力してください。")
+input_text = st.text_input(
+    "テキストを入力してください。",
+)
 
 if st.button("実行"):
     st.divider()
 
-    if selected_item == "文字数カウント":
-        if input_message:
-            st.write(f"文字数: **{text_count}**")
-
-        else:
-            st.error("カウント対象となるテキストを入力してから「実行」ボタンを押してください。")
-
+    if not input_text:
+        st.error("テキストを入力してください。")
     else:
-        if height and weight:
-            try:
-                bmi = round(int(weight) / ((int(height)/100) ** 2), 1)
-                st.write(f"BMI値: {bmi}")
+        text_count = len(input_text)
+        st.write(f"文字数: {text_count}文字")
 
-            except ValueError as e:
-                st.error("身長と体重は数値で入力してください。")
+        # モードに応じて system メッセージを切り替え
+        system_message = (
+            "あなたはドラえもんに関するアドバイザーです。"
+            if selected_item == "ドラえもんの専門家"
+            else "あなたはポケモンに関するアドバイザーです。"
+        )
 
-        else:
-            st.error("身長と体重をどちらも入力してください。")
+        # OpenAI API 呼び出し
+        response = client.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=[
+                {"role": "system", "content": system_message},
+                {"role": "user", "content": input_text}
+            ],
+            temperature=0.5
+        )
+
+        st.write(response.choices[0].message.content)
